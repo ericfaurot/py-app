@@ -16,11 +16,9 @@
 import logging
 import logging.handlers
 
-import app
-
 _logger = None
 
-def init(config):
+def init(config, foreground = False):
     global _logger
 
     procname = config['procname']
@@ -30,7 +28,12 @@ def init(config):
 
     logname = procname
 
-    if app.DAEMON:
+    if foreground:
+        # Log to stderr.
+        logging.basicConfig(level = "DEBUG")
+        logger = logging.getLogger(logname)
+
+    else:
         formatter = logging.Formatter(fmt = " ".join(["%(asctime)s",
                                                       "%s[%%(process)s]:" % procname,
                                                       "%(levelname)s:",
@@ -44,11 +47,6 @@ def init(config):
         logger = logging.getLogger(logname)
         logger.addHandler(handler)
         logger.setLevel("INFO")
-
-    else:
-        # Log to stderr.
-        logging.basicConfig(level = "DEBUG")
-        logger = logging.getLogger(logname)
 
     _logger = logger
 
