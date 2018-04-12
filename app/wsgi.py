@@ -13,6 +13,7 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
+import importlib
 import os
 import time
 
@@ -24,6 +25,35 @@ def run_bottle(app, config):
                host = config.get("bottle.host", "localhost"),
                port = config.getint("bottle.port", 8080),
                server = config.get("bottle.server", "wsgiref"))
+
+_apis = {}
+def api(path):
+    def _(setup):
+        _apis[setup] = path
+        return setup
+    return _
+
+class APIStack(object):
+
+    def __init__(self, prefix = "/"):
+        self.app = bottle.Bottle()
+        self.prefix = prefix
+
+    def _install(self, mount_point, setup):
+        app = bottle.Bottle()
+        setup(app)
+        self.app.mount(mount_point, app)
+        return app
+
+    def install(self, module_name):
+        module = importlib.import_module(module_name)
+        for key, obj in module.__dict__.items():
+            if callable(obj) and obj in _apis:
+                prefix = self.prefix + _apis.get(obj) + "/"
+                self._install(prefix, obj)
+
+    def __call__(self, environ, handler):
+        return self.app(environ, handler)
 
 
 class EnvMiddleware(object):
