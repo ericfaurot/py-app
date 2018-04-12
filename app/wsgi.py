@@ -65,6 +65,9 @@ class LogMiddleware(object):
         except Exception as exc:
             self.logger.error("Failed to log WSGI error", exc_info = exc)
 
+def abort(code, message):
+    bottle.abort(code, message)
+
 class Form(object):
 
     def __init__(self, request = None):
@@ -100,7 +103,7 @@ class Parameters(object):
 
     def __init__(self, params):
         if not isinstance(params, dict):
-            bottle.abort(400, 'Expect parameter object')
+            abort(400, 'Expect parameter object')
         self.params = params
 
     def __enter__(self):
@@ -109,7 +112,7 @@ class Parameters(object):
     def __exit__(self, type, value, traceback):
         if (type, value, traceback) == (None, None, None):
             if self.params:
-                bottle.abort(400, 'Unexpected parameter(s): %s' % ', '.join(self.params.keys()))
+                abort(400, 'Unexpected parameter(s): %s' % ', '.join(self.params.keys()))
 
     def get(self, name, default, validate):
         value = self.params.pop(name, _unset)
@@ -117,15 +120,15 @@ class Parameters(object):
         if value is _unset:
             if default is not _mandatory:
                 return default
-            bottle.abort(400, 'Missing parameter %s' % (name, ))
+            abort(400, 'Missing parameter %s' % (name, ))
 
         if validate:
             try:
                 validate(value)
             except TypeError as e:
-                bottle.abort(400, 'Invalid parameter type: %s: %s' % (name, e.message))
+                abort(400, 'Invalid parameter type: %s: %s' % (name, e.message))
             except ValueError as e:
-                bottle.abort(400, 'Invalid parameter value: %s: %s' % (name, e.message))
+                abort(400, 'Invalid parameter value: %s: %s' % (name, e.message))
         return value
 
     def get_list(self, name, default, validate, maxlen):
@@ -226,12 +229,11 @@ class Parameters(object):
             # XXX validate email?
             return v.strip().lower()
 
-
 def _request_json(request):
     try:
         return request.json
     except ValueError:
-        bottle.abort(400, 'Invalid JSON content')
+        abort(400, 'Invalid JSON content')
 
 def params(request = None):
     if request is None:
@@ -242,4 +244,4 @@ def no_params(request = None):
     if request is None:
         request = bottle.request
     if _request_json(request):
-        bottle.abort(400, 'No parameter expected')
+        abort(400, 'No parameter expected')
