@@ -25,6 +25,21 @@ def run_bottle(app, config):
                port = config.getint("bottle.port", 8080),
                server = config.get("bottle.server", "wsgiref"))
 
+
+class EnvMiddleware(object):
+
+    def __init__(self, app, environ = None):
+        self.app = app
+        self.environ = {} if environ is None else environ
+
+    def setenv(self, key, value):
+        self.environ[key] = value
+
+    def __call__(self, environ, handler):
+        environ.update(self.environ)
+        return self.app(environ, handler)
+
+
 class LogMiddleware(object):
 
     timestamp = 0
