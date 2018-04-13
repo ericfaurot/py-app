@@ -70,6 +70,9 @@ def init(procname = None,
 
     return logger
 
+def debug(*args):
+    _logger.debug(*args)
+
 def info(*args):
     _logger.info(*args)
 
