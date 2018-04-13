@@ -15,38 +15,56 @@
 #
 import logging
 import logging.handlers
+import os
+import sys
 
 _logger = None
 
-def init(config, foreground = False):
+def init(procname = None,
+         foreground = False,
+         level = "INFO",
+         logfile = None,
+         logfile_maxcount = 10,
+         logfile_maxsize = 10 * 1024 * 1024,
+         facility = "user"):
+
     global _logger
+    assert _logger is None
 
-    procname = config['procname']
-    logfile = config['logfile']
-    backupCount = config.getint('log.maxfile', 10)
-    maxBytes = config.getint('log.maxsize', 10 * 1024 * 1024)
-
-    logname = procname
+    if procname is None:
+        procname = sys.argv[0]
 
     if foreground:
         # Log to stderr.
-        logging.basicConfig(level = "DEBUG")
-        logger = logging.getLogger(logname)
+        logging.basicConfig(level = level)
+        logger = logging.getLogger(procname)
 
     else:
-        formatter = logging.Formatter(fmt = " ".join(["%(asctime)s",
-                                                      "%s[%%(process)s]:" % procname,
-                                                      "%(levelname)s:",
-                                                      "%(message)s" ]),
-                                      datefmt = "%Y-%m-%d %H:%M:%S")
-        handler = logging.handlers.RotatingFileHandler(logfile,
-                                                       maxBytes = maxBytes,
-                                                       backupCount = backupCount)
-        handler.setLevel("INFO")
+
+        if logfile:
+            # Log to file.
+            formatter = logging.Formatter(fmt = " ".join(["%(asctime)s",
+                                                          "%s[%%(process)s]:" % procname,
+                                                          "%(levelname)s:",
+                                                          "%(message)s" ]),
+                                          datefmt = "%Y-%m-%d %H:%M:%S")
+            handler = logging.handlers.RotatingFileHandler(logfile,
+                                                           maxBytes = logfile_maxsize,
+                                                           backupCount = logfile_maxcount)
+        else:
+            # Log to syslog.
+            formatter = logging.Formatter(fmt = " ".join(["%s[%%(process)s]:" % procname,
+                                                          "%(levelname)s:",
+                                                          "%(message)s" ]),
+                                          datefmt = "%Y-%m-%d %H:%M:%S")
+            handler = logging.handlers.SysLogHandler("/dev/log" if os.path.exists("/dev/log") else "/var/run/syslog",
+                                                     facility = facility)
+
+        handler.setLevel(level)
         handler.setFormatter(formatter)
-        logger = logging.getLogger(logname)
+        logger = logging.getLogger(procname)
         logger.addHandler(handler)
-        logger.setLevel("INFO")
+        logger.setLevel(level)
 
     _logger = logger
 
