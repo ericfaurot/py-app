@@ -52,26 +52,26 @@ def _drop_priv(username):
     os.setresuid(pw.pw_uid, pw.pw_uid, pw.pw_uid)
 
 
-def kill(config, signum):
+def kill(pidfile, signum):
     """
     Send a signal to the given app process.
     """
     try:
-        pid = int(open(config["pidfile"]).read().strip())
+        pid = int(open(pidfile).read().strip())
     except FileNotFoundError:
         return False
     os.kill(pid, signum)
     return True
 
 
-def wait(config, delay = 30):
+def wait(pidfile, delay = 30):
     """
     Wait for the given app process to terminate.
     """
     t0 = time.time()
     while time.time() - t0 < delay:
         try:
-            fd = os.open(config['pidfile'], os.O_EXLOCK | os.O_WRONLY | os.O_NONBLOCK)
+            fd = os.open(pidfile, os.O_EXLOCK | os.O_WRONLY | os.O_NONBLOCK)
             os.close(fd)
             return
         except BlockingIOError:
@@ -84,14 +84,13 @@ def wait(config, delay = 30):
     raise TimeoutError("Process is still running")
 
 
-def daemon(config):
+def daemon(pidfile = None):
     """
-    Run as daemon as specified in the config.
+    Run as daemon.
     """
 
     # If necessary, get an exclusive lock on the pid file,
     # to make sure it is not running already.
-    pidfile = config.get("pidfile")
     if pidfile:
         pidfd = os.open(pidfile, os.O_CREAT | os.O_TRUNC | os.O_EXLOCK | os.O_WRONLY | os.O_NONBLOCK | os.O_CLOEXEC)
         os.write(pidfd, ("%d\n" % os.getpid()).encode())
@@ -126,9 +125,9 @@ def daemon(config):
     signal.signal(signal.SIGTERM, _terminate)
 
 
-def stop(config):
+def stop(pidfile):
     """
     Send the SIGTERM signal to the given app process if running,
     and wait for the process to stop.
     """
-    kill(config, signum = signal.SIGTERM)
+    kill(pidfile, signum = signal.SIGTERM)
