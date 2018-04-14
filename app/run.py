@@ -52,7 +52,7 @@ def _drop_priv(username):
     os.setresuid(pw.pw_uid, pw.pw_uid, pw.pw_uid)
 
 
-def kill(pidfile, signum):
+def kill(pidfile, signum = signal.SIGKILL):
     """
     Send a signal to the given app process.
     """

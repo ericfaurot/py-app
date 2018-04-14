@@ -16,7 +16,7 @@ if args:
     if args[0] == 'stop':
         app.run.stop(pidfile)
     elif args[0] == 'kill':
-        app.run.kill(pidfile, 9)
+        app.run.kill(pidfile)
 else:
     app.log.init()
     app.run.daemon(pidfile)
