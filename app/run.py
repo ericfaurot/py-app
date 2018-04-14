@@ -89,10 +89,6 @@ def daemon(config):
     Run as daemon as specified in the config.
     """
 
-    # Set the proc title
-    if "proctitle" in config:
-        setproctitle(config["proctitle"])
-
     # If necessary, get an exclusive lock on the pid file,
     # to make sure it is not running already.
     pidfile = config.get("pidfile")
