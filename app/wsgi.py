@@ -20,11 +20,9 @@ import time
 import bottle
 
 
-def run_bottle(app, config):
-    bottle.run(app = app, quiet = True,
-               host = config.get("bottle.host", "localhost"),
-               port = config.getint("bottle.port", 8080),
-               server = config.get("bottle.server", "wsgiref"))
+def run_bottle(app, **kwargs):
+    bottle.run(app = app, quiet = True, **kwargs)
+
 
 _apis = {}
 def api(path):
