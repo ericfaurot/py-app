@@ -17,6 +17,7 @@ import logging
 import logging.handlers
 import os
 import sys
+import traceback
 
 _logger = None
 
@@ -81,3 +82,15 @@ def warn(*args):
 
 def error(*args):
     _logger.error(*args)
+
+def exception(*args):
+    try:
+        if len(args) > 1:
+            msg = args[0] % args[1:]
+        elif len(args) == 1:
+            msg = args[0]
+        else:
+            msg = 'EXCEPTION'
+    except Exception as exc:
+        msg = 'FAILURE IN EXCEPTION LOGGING: %s' % exc
+    _logger.critical(msg + "\n" + traceback.format_exc())
