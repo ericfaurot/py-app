@@ -14,6 +14,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 import asyncio
+import json
 import signal
 
 import app.log
@@ -52,3 +53,42 @@ def start(func):
         loop.close()
 
     app.log.debug("async: done")
+
+
+class JSONStreamProtocol(asyncio.Protocol):
+
+    ibuf = None
+    transport = None
+
+    LINEMAX = 2 ** 20
+
+    def connection_made(self, transport):
+        self.transport = transport
+
+    def connection_lost(self, exc):
+        pass
+
+    def data_received(self, data):
+        if self.ibuf:
+            data = self.ibuf + data
+            del self.ibuf
+
+        for line in data.splitlines(True):
+            if not line.endswith(b'\n'):
+                self.ibuf = line
+                break
+            try:
+                self.received(json.loads(line.decode().strip()))
+            except:
+                self.transport.close()
+                raise
+
+        if self.ibuf and len(self.ibuf) >= self.LINEMAX:
+            app.log.warn('line too long: %d', len(self.ibuf))
+            self.transport.close()
+
+    def send(self, obj):
+        self.transport.write(json.dumps(obj).encode() + b'\n')
+
+    def received(self, obj):
+        app.log.info('received: %r', obj)
