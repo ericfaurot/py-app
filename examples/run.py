@@ -21,7 +21,7 @@ else:
     app.log.init()
     app.run.daemon(pidfile)
 
-    app.log.info("starting")
+    app.log.info("starting %s", app.log.procname())
     for i in range(20):
         app.log.info("%d...", i)
         time.sleep(1)

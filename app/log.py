@@ -20,6 +20,7 @@ import sys
 import traceback
 
 _logger = None
+_procname = None
 
 def init(procname = None,
          foreground = False,
@@ -30,10 +31,12 @@ def init(procname = None,
          facility = "user"):
 
     global _logger
+    global _procname
     assert _logger is None
 
     if procname is None:
         procname = sys.argv[0]
+        _procname = procname
 
     if foreground:
         # Log to stderr.
@@ -70,6 +73,9 @@ def init(procname = None,
     _logger = logger
 
     return logger
+
+def procname():
+    return _procname
 
 def debug(*args):
     _logger.debug(*args)
