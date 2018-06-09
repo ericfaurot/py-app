@@ -100,3 +100,17 @@ def exception(*args):
     except Exception as exc:
         msg = 'FAILURE IN EXCEPTION LOGGING: %s' % exc
     _logger.critical(msg + "\n" + traceback.format_exc())
+
+
+def future(future):
+    if future.cancelled():
+        warn("FUTURE CANCELLED")
+    elif future.exception():
+        try:
+            raise future.exception()
+        except:
+            exception("FUTURE EXCEPTION")
+    else:
+        result = future.result()
+        if result is not None:
+            warn("FUTURE RESULT: %r", result)
