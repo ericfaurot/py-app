@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(name="py-app",
       description="Simple helpers for python apps",
-      version="0.6-dev",
+      version="0.7-dev",
       author="Eric Faurot",
       author_email="eric@faurot.net",
       url="https://github.com/ericfaurot/py-app",
