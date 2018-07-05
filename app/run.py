@@ -15,6 +15,7 @@
 #
 import atexit
 import errno
+import fcntl
 import grp
 import os
 import pwd
@@ -64,6 +65,34 @@ def kill(pidfile, signum = signal.SIGKILL):
     return True
 
 
+_HAS_EXLOCK = hasattr(os, "O_EXLOCK")
+def _wopenpidfile(pidfile):
+    if _HAS_EXLOCK:
+        return os.open(pidfile, os.O_CREAT | os.O_TRUNC | os.O_EXLOCK | os.O_WRONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+
+    fd = os.open(pidfile, os.O_CREAT | os.O_WRONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except:
+        os.close(fd)
+        raise
+    os.ftruncate(fd, 0)
+    os.lseek(fd, 0, os.SEEK_SET)
+    return fd
+
+def _ropenpidfile(pidfile):
+    if _HAS_EXLOCK:
+        return os.open(pidfile, os.O_EXLOCK | os.O_WRONLY | os.O_NONBLOCK)
+
+    fd = os.open(pidfile, os.O_WRONLY | os.O_NONBLOCK)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except:
+        os.close(fd)
+        raise
+    fcntl.flock(fd, fcntl.LOCK_UN)
+    return fd
+
 def wait(pidfile, delay = 30):
     """
     Wait for the given app process to terminate.
@@ -71,7 +100,7 @@ def wait(pidfile, delay = 30):
     t0 = time.time()
     while time.time() - t0 < delay:
         try:
-            fd = os.open(pidfile, os.O_EXLOCK | os.O_WRONLY | os.O_NONBLOCK)
+            fd = _ropenpidfile(pidfile)
             os.close(fd)
             return
         except BlockingIOError:
@@ -92,7 +121,7 @@ def daemon(pidfile = None):
     # If necessary, get an exclusive lock on the pid file,
     # to make sure it is not running already.
     if pidfile:
-        pidfd = os.open(pidfile, os.O_CREAT | os.O_TRUNC | os.O_EXLOCK | os.O_WRONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+        pidfd = _wopenpidfile(pidfile)
         os.write(pidfd, ("%d\n" % os.getpid()).encode())
 
     # Now fork twice, and create a new session.
