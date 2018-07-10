@@ -36,7 +36,7 @@ def init(procname = None,
 
     if procname is None:
         procname = sys.argv[0]
-        _procname = procname
+    _procname = procname
 
     if foreground:
         # Log to stderr.
