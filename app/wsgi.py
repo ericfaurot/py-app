@@ -169,9 +169,9 @@ class Parameters(object):
             try:
                 validate(value)
             except TypeError as e:
-                abort(400, 'Invalid parameter type: %s: %s' % (name, e.message))
+                abort(400, 'Invalid parameter type: %s: %s' % (name, str(e)))
             except ValueError as e:
-                abort(400, 'Invalid parameter value: %s: %s' % (name, e.message))
+                abort(400, 'Invalid parameter value: %s: %s' % (name, str(e)))
         return value
 
     def get_list(self, name, default, validate, maxlen):
