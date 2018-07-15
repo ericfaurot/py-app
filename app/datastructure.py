@@ -99,6 +99,12 @@ class DoublyLinkedList(object):
         self._remove_node(node)
         return node[2]
 
+    def pop_head_n(self, count):
+        for _ in range(count):
+            if not self.head:
+                break
+            yield self.pop_head()
+
     def peek_tail(self):
         return self.tail[2]
 
@@ -106,6 +112,12 @@ class DoublyLinkedList(object):
         node = self.tail
         self._remove_node(node)
         return node[2]
+
+    def pop_tail_n(self, count):
+        for _ in range(count):
+            if not self.tail:
+                break
+            yield self.pop_tail()
 
     def remove(self, node):
         self._remove_node(node)
