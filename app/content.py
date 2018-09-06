@@ -92,18 +92,25 @@ class ContentFile(object):
             yield hdr, val.strip()
 
     def headers(self):
-        with open(self.path, "rb") as fp:
-            return list(self._iter_hdrs(fp))
+        with self.open() as fp:
+            return fp.headers
 
     def open(self):
         fp = open(self.path, "rb")
-        for line in self._iter_hdrlines(fp):
-            if line.startswith("Offset:"):
-                offset = int(line[len("Offset:"):].strip())
-                fp.seek(offset)
-                return fp
-        fp.close()
-        raise InvalidFileFormat("No offset found")
+        try:
+            offset = None
+            fp.headers = []
+            for key, value in self._iter_hdrs(fp):
+                fp.headers.append((key, value))
+                if key == 'Offset':
+                    offset = int(value)
+            if offset is None:
+                raise InvalidFileFormat("No offset found")
+            fp.seek(offset)
+            return fp
+        except:
+            fp.close()
+            raise
 
     def write(self, body, meta = (), chunk_size=2**16):
 
