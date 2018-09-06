@@ -15,11 +15,11 @@ class TestContent(unittest.TestCase):
     def tearDown(self):
         self.tmpdir.cleanup()
 
-    def content(self, name = None):
-        if name is None:
-            name = "file-%d" % self.count
+    def content(self, path = None):
+        if path is None:
+            path = os.path.join(self.tmpdir.name, "file-%d" % self.count)
             self.count += 1
-        return app.content.ContentFile(os.path.join(self.tmpdir.name, name))
+        return app.content.ContentFile(path)
 
     def test_empty(self):
         content = self.content()
@@ -123,5 +123,5 @@ class TestContent(unittest.TestCase):
             fp.write("Offset: 20000\n")
 
         with self.assertRaises(app.content.InvalidFileFormat):
-            with content.open() as fp:
+            with content.open():
                 pass
