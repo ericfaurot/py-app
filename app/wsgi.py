@@ -278,10 +278,12 @@ def _request_json(request):
     except ValueError:
         abort(400, 'Invalid JSON content')
 
-def params(request = None):
-    if request is None:
-        request = bottle.request
-    return Parameters(_request_json(request) or {})
+def params(request = None, data = None):
+    if data is None:
+        if request is None:
+            request = bottle.request
+        data = _request_json(request) or {}
+    return Parameters(data)
 
 def no_params(request = None):
     if request is None:
