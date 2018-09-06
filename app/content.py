@@ -76,20 +76,16 @@ class ContentFile(object):
     def __init__(self, path):
         self.path = path
 
-    def _iter_hdrlines(self, fp):
+    def _iter_headers(self, fp):
         while True:
             line = fp.readline()
             if not line or line == b"\n":
                 return
-            yield line.decode()
-
-    def _iter_hdrs(self, fp):
-        for line in self._iter_hdrlines(fp):
             try:
-                hdr, val = line.split(":", 1)
+                key, value = line.decode().split(":", 1)
             except:
                 raise InvalidFileFormat("Invalid header line")
-            yield hdr, val.strip()
+            yield key, value.strip()
 
     def headers(self):
         with self.open() as fp:
@@ -100,7 +96,7 @@ class ContentFile(object):
         try:
             offset = None
             fp.headers = []
-            for key, value in self._iter_hdrs(fp):
+            for key, value in self._iter_headers(fp):
                 fp.headers.append((key, value))
                 if key == 'Offset':
                     offset = int(value)
