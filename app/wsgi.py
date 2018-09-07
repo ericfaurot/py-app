@@ -290,3 +290,44 @@ def no_params(request = None):
         request = bottle.request
     if _request_json(request):
         abort(400, 'No parameter expected')
+
+
+def _fmt_time(timestamp = None):
+    if timestamp is None:
+        timestamp = time.time()
+    return time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(timestamp))
+
+
+class ContentView:
+
+    def __init__(self, body, ctype, size, mtime, etag = None):
+        self.body = body
+        self.ctype = ctype
+        self.size = size
+        self.mtime = mtime
+        self.etag = etag
+
+    def _modified(self, request):
+        return True
+
+    def get(self, request = None):
+        if request is None:
+            request = bottle.request
+
+        response = bottle.HTTPResponse()
+        response.set_header("Content-Type", self.ctype)
+        response.set_header("Content-Length", self.size)
+        response.set_header("Last-Modified", _fmt_time(self.mtime))
+        if self.etag is not None:
+            response.set_header("ETag", self.etag)
+
+        if request.method == "HEAD":
+            self.fp.close()
+        elif not self._modified(request):
+            response.status = "304 Not modified"
+            response.set_header("Content-Length", 0)
+            self.fp.close()
+        else:
+            response.body = self.body
+
+        return response
