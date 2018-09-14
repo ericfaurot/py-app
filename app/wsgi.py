@@ -322,11 +322,11 @@ class ContentView:
             response.set_header("ETag", self.etag)
 
         if request.method == "HEAD":
-            self.fp.close()
+            self.body.close()
         elif not self._modified(request):
             response.status = "304 Not modified"
             response.set_header("Content-Length", 0)
-            self.fp.close()
+            self.body.close()
         else:
             response.body = self.body
 
