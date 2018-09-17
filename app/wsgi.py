@@ -297,8 +297,13 @@ def _fmt_time(timestamp = None):
         timestamp = time.time()
     return time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(timestamp))
 
+def _make_etag(*parts):
+    hash = hashlib.sha1()
+    for part in parts:
+        hash.update(str(part).encode('utf-8'))
+    return hash.hexdigest()
 
-class ContentView:
+class ResourceView:
 
     def __init__(self, body, ctype, size, mtime, etag = None):
         self.body = body
@@ -317,7 +322,10 @@ class ContentView:
         response = bottle.HTTPResponse()
         response.set_header("Content-Type", self.ctype)
         response.set_header("Content-Length", self.size)
-        response.set_header("Last-Modified", _fmt_time(self.mtime))
+        if isinstance(self.mtime, str):
+            response.set_header("Last-Modified", self.mtime)
+        else:
+            response.set_header("Last-Modified", _fmt_time(self.mtime))
         if self.etag is not None:
             response.set_header("ETag", self.etag)
 
@@ -331,3 +339,25 @@ class ContentView:
             response.body = self.body
 
         return response
+
+
+def content_view(content):
+    # app.content.ContentFile
+    fp = content.open()
+    headers = { key: val for key, val in fp.headers }
+    return ResourceView(fp,
+                        headers["Content-Type"],
+                        int(headers["Size"]),
+                        int(headers["Timestamp"]),
+                        etag = headers["ETag"])
+
+def file_view(path, ctype = 'application/octect-stream', etag = None):
+    fp = open(path, "rb")
+    stat = os.fstat(fp.fileno())
+    if etag is None:
+        etag = _make_etag(path, stat.st_size, stat.st_mtime)
+    return ResourceView(fp,
+                        ctype,
+                        stat.st_size,
+                        stat.st_mtime,
+                        etag = etag)
