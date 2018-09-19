@@ -13,6 +13,7 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
+import hashlib
 import importlib
 import os
 import time
@@ -291,7 +292,6 @@ def no_params(request = None):
     if _request_json(request):
         abort(400, 'No parameter expected')
 
-
 def _fmt_time(timestamp = None):
     if timestamp is None:
         timestamp = time.time()
@@ -315,27 +315,73 @@ class ResourceView:
     def _modified(self, request):
         return True
 
+    def _parse_range(self, request):
+        value = request.environ.get('HTTP_RANGE', '')
+        if not value.startswith("bytes="):
+            return None
+
+        for rng in value.split("=", 1)[1].split(","):
+            if '-' not in rng:
+                continue
+            offset, end = rng.split('-', 1)
+            if (offset, end) == ('', ''):
+                continue
+            if not offset:
+                offset, end = max(0, self.size - int(end) + 1), self.size
+            elif not end:
+                offset, end = int(offset), self.size
+            else:
+                offset, end = int(offset), int(end) + 1
+            if 0 <= offset < end <= self.size:
+                return offset, end
+
+        return None
+
+    def _iter_range(self, body, offset, count):
+        try:
+            body.seek(offset, 1)
+            while count > 0:
+                chunk = body.read(min(count, 1024 * 1024))
+                if not count:
+                    break
+                count -= len(chunk)
+                yield chunk
+        except:
+            app.log.exception()
+            raise
+
     def get(self, request = None):
         if request is None:
             request = bottle.request
 
+        range = self._parse_range(request)
+
         response = bottle.HTTPResponse()
+        response.set_header("Accept-Ranges", "bytes")
         response.set_header("Content-Type", self.ctype)
-        response.set_header("Content-Length", self.size)
         if isinstance(self.mtime, str):
             response.set_header("Last-Modified", self.mtime)
         else:
             response.set_header("Last-Modified", _fmt_time(self.mtime))
         if self.etag is not None:
+            # XXX not if Range?
             response.set_header("ETag", self.etag)
 
         if request.method == "HEAD":
+            response.set_header("Content-Length", self.size)
             self.body.close()
         elif not self._modified(request):
-            response.status = "304 Not modified"
             response.set_header("Content-Length", 0)
+            response.status = "304 Not modified"
             self.body.close()
+        elif range:
+            offset, end = range
+            response.set_header("Content-Length", end - offset)
+            response.set_header("Content-Range",  "bytes %d-%d/%d" % (offset, end - 1, self.size))
+            response.status = "206 Partial Content"
+            response.body = self._iter_range(self.body, offset, end - offset)
         else:
+            response.set_header("Content-Length", self.size)
             response.body = self.body
 
         return response
